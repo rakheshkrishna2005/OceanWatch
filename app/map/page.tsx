@@ -180,15 +180,14 @@ export default function MapPage() {
         const marker = L.marker([hazard.coordinates.lat, hazard.coordinates.lng], { icon })
           .addTo(map)
           .bindPopup(`
-            <div class="p-2 min-w-[200px]">
-              <h3 class="font-semibold text-sm mb-1">${hazard.title}</h3>
+            <div class="p-1 min-w-[160px]">
+              <h3 class="font-medium text-xs mb-1">${hazard.title}</h3>
               <p class="text-xs text-gray-600 mb-1">${hazard.specificLocation || hazard.location}</p>
-              <div class="flex gap-1 mb-2">
-                <span class="text-xs px-2 py-1 rounded ${getSeverityBadgeClass(hazard.severity)}">${hazard.severity}</span>
-                <span class="text-xs px-2 py-1 rounded ${getStatusBadgeClass(hazard.status)}">${hazard.status}</span>
+              <div class="flex gap-1 mb-1">
+                <span class="text-xs px-1 py-0.5 rounded ${getSeverityBadgeClass(hazard.severity)}">${hazard.severity}</span>
+                <span class="text-xs px-1 py-0.5 rounded ${getStatusBadgeClass(hazard.status)}">${hazard.status}</span>
               </div>
-              <p class="text-xs mb-2">${hazard.hazardType}</p>
-              <a href="/hazard/${hazard._id}" class="text-xs text-blue-600 hover:text-blue-800 underline">View Details</a>
+              <p class="text-xs text-gray-500">${hazard.hazardType}</p>
             </div>
           `)
           .on("click", () => setSelectedHazard(hazard))
@@ -481,8 +480,8 @@ export default function MapPage() {
 
           {/* Selected Hazard Details */}
           {selectedHazard && (
-            <div className="absolute bottom-4 right-8 w-72">
-              <Card className="border-border bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm">
+            <div className="absolute bottom-4 right-8 w-72 z-[9999]" style={{ zIndex: 9999 }}>
+              <Card className="border-border bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-lg">
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -540,12 +539,6 @@ export default function MapPage() {
                     )}
                   </div>
                   <div className="pt-1">
-                    <Link href={`/hazard/${selectedHazard._id}`}>
-                      <Button size="sm" className="w-full bg-accent text-accent-foreground hover:bg-accent/90 text-xs">
-                        <Eye className="h-3 w-3 mr-1" />
-                        View Full Details
-                      </Button>
-                    </Link>
                   </div>
                 </CardContent>
               </Card>
