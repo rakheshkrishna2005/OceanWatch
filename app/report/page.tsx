@@ -46,14 +46,29 @@ export default function ReportPage() {
     setIsGettingLocation(true)
     setLocationError("")
 
+    // Check if geolocation is supported
     if (!navigator.geolocation) {
       setLocationError("Geolocation is not supported by this browser")
       setIsGettingLocation(false)
       return
     }
 
+    // Check if the page is served over HTTPS (required for geolocation in many browsers)
+    if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+      setLocationError("Geolocation requires HTTPS connection. Please use HTTPS or localhost.")
+      setIsGettingLocation(false)
+      return
+    }
+
+    const options = {
+      enableHighAccuracy: true,
+      timeout: 10000, // 10 seconds timeout
+      maximumAge: 60000 // Accept a cached position up to 1 minute old
+    }
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        console.log('Location obtained:', position.coords)
         setFormData((prev) => ({
           ...prev,
           coordinates: {
@@ -64,9 +79,28 @@ export default function ReportPage() {
         setIsGettingLocation(false)
       },
       (error) => {
-        setLocationError("Unable to retrieve your location. Please enter coordinates manually.")
+        console.error('Geolocation error:', error)
+        let errorMessage = "Unable to retrieve your location. "
+        
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage += "Permission denied. Please allow location access and try again."
+            break
+          case error.POSITION_UNAVAILABLE:
+            errorMessage += "Location information is unavailable. Please check your GPS/network connection."
+            break
+          case error.TIMEOUT:
+            errorMessage += "Location request timed out. Please try again."
+            break
+          default:
+            errorMessage += "An unknown error occurred. Please enter coordinates manually."
+            break
+        }
+        
+        setLocationError(errorMessage)
         setIsGettingLocation(false)
       },
+      options
     )
   }
 
@@ -334,11 +368,22 @@ export default function ReportPage() {
                         onClick={getCurrentLocation}
                         disabled={isGettingLocation}
                         className="text-xs bg-transparent btn-colorful"
+                        title="Click to get your current GPS coordinates"
                       >
                         <MapPin className="h-3 w-3 mr-1" />
                         {isGettingLocation ? "Getting Location..." : "Use Current Location"}
                       </Button>
                     </div>
+                    {!navigator.geolocation && (
+                      <div className="text-xs text-muted-foreground">
+                        ⚠️ Geolocation not supported by this browser
+                      </div>
+                    )}
+                    {typeof window !== 'undefined' && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && (
+                      <div className="text-xs text-amber-600">
+                        ⚠️ HTTPS required for location access in production
+                      </div>
+                    )}
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <Label htmlFor="latitude" className="text-xs text-muted-foreground">
