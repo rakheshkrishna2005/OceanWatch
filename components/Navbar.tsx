@@ -50,7 +50,7 @@ export default function Navbar() {
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2">
               <Waves className="h-6 w-6 text-primary" />
-              <span className="font-semibold text-foreground">OceanWatch</span>
+              <span className="font-semibold text-foreground">CascadeVision</span>
             </Link>
           </div>
 

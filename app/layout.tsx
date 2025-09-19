@@ -5,7 +5,7 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'OceanWatch',
+  title: 'CascadeVision',
   description: 'Ocean Hazard Management Platform',
 }
 
