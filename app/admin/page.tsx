@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import HazardDetailModal from "@/components/HazardDetailModal"
 import Navbar from "@/components/Navbar"
+import { locations } from "@/lib/models/HazardReport"
 import {
   Shield,
   Clock,
@@ -59,6 +60,7 @@ export default function AdminPage() {
     status: "All",
     severity: "All",
     priority: "All",
+    location: "All",
   })
   const [activeTab, setActiveTab] = useState("pending")
   const [selectedHazardId, setSelectedHazardId] = useState<string | null>(null)
@@ -105,6 +107,7 @@ export default function AdminPage() {
     if (filters.status !== "All" && report.status !== filters.status) return false
     if (filters.severity !== "All" && report.severity !== filters.severity) return false
     if (filters.priority !== "All" && report.priority !== filters.priority) return false
+    if (filters.location !== "All" && report.location !== filters.location) return false
 
     return true
   })
@@ -204,135 +207,158 @@ export default function AdminPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-4 sm:py-6">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-balance mb-2">Admin Verification Panel</h1>
-          <p className="text-lg text-muted-foreground text-pretty">
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-balance mb-1 sm:mb-2">Admin Verification Panel</h1>
+          <p className="text-sm sm:text-base lg:text-lg text-muted-foreground text-pretty">
             Review, verify, and manage ocean hazard reports from the community
           </p>
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
           <Card className="border-border">
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Pending Verification</p>
-                  <p className="text-2xl font-bold text-foreground">{pendingCount}</p>
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">Pending Verification</p>
+                  <p className="text-xl sm:text-2xl font-bold text-foreground">{pendingCount}</p>
                 </div>
-                <Clock className="h-8 w-8 text-yellow-600" />
+                <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600" />
               </div>
             </CardContent>
           </Card>
           <Card className="border-border">
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Verified Reports</p>
-                  <p className="text-2xl font-bold text-foreground">{verifiedCount}</p>
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">Verified Reports</p>
+                  <p className="text-xl sm:text-2xl font-bold text-foreground">{verifiedCount}</p>
                 </div>
-                <Shield className="h-8 w-8 text-green-600" />
+                <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
               </div>
             </CardContent>
           </Card>
           <Card className="border-border">
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Closed Issues</p>
-                  <p className="text-2xl font-bold text-foreground">{closedCount}</p>
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">Closed Issues</p>
+                  <p className="text-xl sm:text-2xl font-bold text-foreground">{closedCount}</p>
                 </div>
-                <CheckCircle className="h-8 w-8 text-gray-600" />
+                <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-gray-600" />
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Search and Filters */}
-        <Card className="border-border mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5 text-primary" />
+        <Card className="border-border mb-3 sm:mb-4">
+          <CardHeader className="pb-1">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Search className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               Search & Filter Reports
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="md:col-span-2">
-                <Label htmlFor="search">Search Reports</Label>
+          <CardContent className="pt-0">
+            <div className="space-y-2 sm:space-y-3">
+              {/* Search Input - Full Width */}
+              <div>
+                <Label htmlFor="search" className="text-xs sm:text-sm text-foreground">Search Reports</Label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                   <Input
                     id="search"
                     placeholder="Search by title, location, type..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
+                    className="pl-8 sm:pl-10 text-xs sm:text-sm h-8 sm:h-9 text-foreground"
                   />
                 </div>
               </div>
-              <div>
-                <Label>Severity</Label>
-                <Select
-                  value={filters.severity}
-                  onValueChange={(value) => setFilters((prev) => ({ ...prev, severity: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="All">All Severities</SelectItem>
-                    <SelectItem value="Low">Low</SelectItem>
-                    <SelectItem value="Medium">Medium</SelectItem>
-                    <SelectItem value="High">High</SelectItem>
-                    <SelectItem value="Critical">Critical</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Priority</Label>
-                <Select
-                  value={filters.priority}
-                  onValueChange={(value) => setFilters((prev) => ({ ...prev, priority: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="All">All Priorities</SelectItem>
-                    <SelectItem value="Low">Low</SelectItem>
-                    <SelectItem value="Medium">Medium</SelectItem>
-                    <SelectItem value="High">High</SelectItem>
-                  </SelectContent>
-                </Select>
+              {/* Filters in Same Row - Full Width */}
+              <div className="flex gap-2 sm:gap-3">
+                <div className="flex-1">
+                  <Label className="text-xs sm:text-sm text-foreground">Location</Label>
+                  <Select
+                    value={filters.location}
+                    onValueChange={(value) => setFilters((prev) => ({ ...prev, location: value }))}
+                  >
+                    <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm text-foreground w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Locations</SelectItem>
+                      {locations.map((location) => (
+                        <SelectItem key={location} value={location}>
+                          {location}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex-1">
+                  <Label className="text-xs sm:text-sm text-foreground">Severity</Label>
+                  <Select
+                    value={filters.severity}
+                    onValueChange={(value) => setFilters((prev) => ({ ...prev, severity: value }))}
+                  >
+                    <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm text-foreground w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Severities</SelectItem>
+                      <SelectItem value="Low">Low</SelectItem>
+                      <SelectItem value="Medium">Medium</SelectItem>
+                      <SelectItem value="High">High</SelectItem>
+                      <SelectItem value="Critical">Critical</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex-1">
+                  <Label className="text-xs sm:text-sm text-foreground">Priority</Label>
+                  <Select
+                    value={filters.priority}
+                    onValueChange={(value) => setFilters((prev) => ({ ...prev, priority: value }))}
+                  >
+                    <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm text-foreground w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Priorities</SelectItem>
+                      <SelectItem value="Low">Low</SelectItem>
+                      <SelectItem value="Medium">Medium</SelectItem>
+                      <SelectItem value="High">High</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Reports Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="pending" className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Pending ({pendingCount})
+        {/* Reports Tabs - Compact Status Bar */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-3 sm:space-y-4">
+          <TabsList className="grid w-full grid-cols-3 h-8 sm:h-9">
+            <TabsTrigger value="pending" className="flex items-center justify-center gap-1 text-xs sm:text-sm h-full text-foreground">
+              <Clock className="h-3 w-3" />
+              <span className="truncate">Pending ({pendingCount})</span>
             </TabsTrigger>
-            <TabsTrigger value="verified" className="flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              Verified ({verifiedCount})
+            <TabsTrigger value="verified" className="flex items-center justify-center gap-1 text-xs sm:text-sm h-full text-foreground">
+              <Shield className="h-3 w-3" />
+              <span className="truncate">Verified ({verifiedCount})</span>
             </TabsTrigger>
-            <TabsTrigger value="closed" className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4" />
-              Closed ({closedCount})
+            <TabsTrigger value="closed" className="flex items-center justify-center gap-1 text-xs sm:text-sm h-full text-foreground">
+              <CheckCircle className="h-3 w-3" />
+              <span className="truncate">Closed ({closedCount})</span>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="pending" className="space-y-4">
+          <TabsContent value="pending" className="space-y-3 sm:space-y-4">
             <Alert className="border-warning/20 bg-warning/5">
-              <Clock className="h-4 w-4 text-warning" />
-              <AlertDescription className="text-warning-foreground">
+              <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-warning" />
+              <AlertDescription className="text-warning-foreground text-xs sm:text-sm text-foreground">
                 These reports are awaiting professional verification. Review each report carefully and update their
                 status accordingly.
               </AlertDescription>
@@ -350,10 +376,10 @@ export default function AdminPage() {
             ))}
           </TabsContent>
 
-          <TabsContent value="verified" className="space-y-4">
+          <TabsContent value="verified" className="space-y-3 sm:space-y-4">
             <Alert className="border-success/20 bg-success/5">
-              <Shield className="h-4 w-4 text-success" />
-              <AlertDescription className="text-success-foreground">
+              <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-success" />
+              <AlertDescription className="text-success-foreground text-xs sm:text-sm text-foreground">
                 These reports have been verified as legitimate hazards and are actively being monitored.
               </AlertDescription>
             </Alert>
@@ -370,10 +396,10 @@ export default function AdminPage() {
             ))}
           </TabsContent>
 
-          <TabsContent value="closed" className="space-y-4">
+          <TabsContent value="closed" className="space-y-3 sm:space-y-4">
             <Alert className="border-muted-foreground/20 bg-muted/10">
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-              <AlertDescription>
+              <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+              <AlertDescription className="text-xs sm:text-sm text-foreground">
                 These issues have been resolved or are no longer active threats to ocean safety.
               </AlertDescription>
             </Alert>
@@ -392,11 +418,11 @@ export default function AdminPage() {
         </Tabs>
 
         {filteredReports.length === 0 && (
-          <Card className="border-border text-center py-12">
+          <Card className="border-border text-center py-8 sm:py-12">
             <CardContent>
-              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">No reports found</h3>
-              <p className="text-muted-foreground">No reports match your current search criteria or tab selection.</p>
+              <FileText className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+              <h3 className="text-sm sm:text-lg font-semibold text-foreground mb-2">No reports found</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground">No reports match your current search criteria or tab selection.</p>
             </CardContent>
           </Card>
         )}
@@ -467,56 +493,58 @@ function ReportCard({
 
   return (
     <Card className="border-border transition-shadow">
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <h3 className="text-lg font-semibold text-foreground">{report.title}</h3>
-              <Badge className={`text-xs ${getSeverityColor(report.severity)}`}>{report.severity}</Badge>
-              <Badge className={`text-xs ${getStatusColor(report.status)}`}>
-                {report.status === "Verified" && <Shield className="h-3 w-3 mr-1" />}
-                {report.status === "Unverified" && <Clock className="h-3 w-3 mr-1" />}
-                {report.status === "Closed" && <CheckCircle className="h-3 w-3 mr-1" />}
-                {report.status}
-              </Badge>
-              {report.priority && (
-                <Badge className={`text-xs ${getPriorityColor(report.priority)}`}>{report.priority} Priority</Badge>
-              )}
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+              <h3 className="text-sm sm:text-base font-semibold text-foreground truncate">{report.title}</h3>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge className={`text-xs w-fit ${getSeverityColor(report.severity)}`}>{report.severity}</Badge>
+                <Badge className={`text-xs w-fit ${getStatusColor(report.status)}`}>
+                  {report.status === "Verified" && <Shield className="h-3 w-3 mr-1" />}
+                  {report.status === "Unverified" && <Clock className="h-3 w-3 mr-1" />}
+                  {report.status === "Closed" && <CheckCircle className="h-3 w-3 mr-1" />}
+                  {report.status}
+                </Badge>
+                {report.priority && (
+                  <Badge className={`text-xs w-fit ${getPriorityColor(report.priority)}`}>{report.priority} Priority</Badge>
+                )}
+              </div>
             </div>
-            <p className="text-muted-foreground text-pretty mb-4">{report.description}</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground">
+            <p className="text-xs sm:text-sm text-muted-foreground text-pretty mb-3 line-clamp-2">{report.description}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-xs text-muted-foreground">
               <div className="space-y-1">
                 <div className="flex items-center gap-1">
-                  <MapPin className="h-4 w-4" />
-                  <span>{report.specificLocation || report.location}</span>
+                  <MapPin className="h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">{report.specificLocation || report.location}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
+                  <Calendar className="h-3 w-3 flex-shrink-0" />
                   <span>{new Date(report.dateReported).toLocaleDateString()}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <AlertTriangle className="h-4 w-4" />
-                  <span>{report.hazardType}</span>
+                  <AlertTriangle className="h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">{report.hazardType}</span>
                 </div>
               </div>
               <div className="space-y-1">
                 <div className="flex items-center gap-1">
-                  <User className="h-4 w-4" />
-                  <span>Reported by {report.reportedBy}</span>
+                  <User className="h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">Reported by {report.reportedBy}</span>
                 </div>
                 {report.contactEmail && (
                   <div className="flex items-center gap-1">
-                    <span>📧 {report.contactEmail}</span>
+                    <span className="truncate">📧 {report.contactEmail}</span>
                   </div>
                 )}
                 {report.contactPhone && (
                   <div className="flex items-center gap-1">
-                    <span>📞 {report.contactPhone}</span>
+                    <span className="truncate">📞 {report.contactPhone}</span>
                   </div>
                 )}
                 {report.mediaFiles && report.mediaFiles.length > 0 && (
                   <div className="flex items-center gap-1">
-                    <Camera className="h-4 w-4" />
+                    <Camera className="h-3 w-3 flex-shrink-0" />
                     <span>
                       {report.mediaFiles.length} media file{report.mediaFiles.length !== 1 ? "s" : ""}
                     </span>
@@ -528,11 +556,17 @@ function ReportCard({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center justify-between pt-4 border-t border-border">
+        <div className="flex items-center justify-between gap-3 pt-3 mt-3 border-t border-border">
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => onViewDetails(report._id)}>
-              <Eye className="h-4 w-4 mr-1" />
-              View Details
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => onViewDetails(report._id)}
+              className="text-xs h-8 px-3 sm:h-9 sm:px-4 whitespace-nowrap"
+            >
+              <Eye className="h-3 w-3 mr-1" />
+              <span className="hidden sm:inline">View Details</span>
+              <span className="sm:hidden">View</span>
             </Button>
           </div>
           <div className="flex items-center gap-2">
@@ -541,19 +575,21 @@ function ReportCard({
                 <Button
                   size="sm"
                   onClick={() => onStatusChange(report._id, "Verified")}
-                  className="bg-green-600 text-white hover:bg-green-700"
+                  className="bg-green-600 text-white hover:bg-green-700 text-xs h-8 px-3 sm:h-9 sm:px-4 whitespace-nowrap"
                 >
-                  <Shield className="h-4 w-4 mr-1" />
-                  Verify
+                  <Shield className="h-3 w-3 mr-1" />
+                  <span className="hidden sm:inline">Verify</span>
+                  <span className="sm:hidden">✓</span>
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => onStatusChange(report._id, "Closed")}
-                  className="text-gray-600 hover:text-gray-700"
+                  className="text-gray-600 hover:text-gray-700 text-xs h-8 px-3 sm:h-9 sm:px-4 whitespace-nowrap"
                 >
-                  <X className="h-4 w-4 mr-1" />
-                  Reject
+                  <X className="h-3 w-3 mr-1" />
+                  <span className="hidden sm:inline">Reject</span>
+                  <span className="sm:hidden">✕</span>
                 </Button>
               </>
             )}
@@ -562,10 +598,11 @@ function ReportCard({
                 variant="outline"
                 size="sm"
                 onClick={() => onStatusChange(report._id, "Closed")}
-                className="text-gray-600 hover:text-gray-700"
+                className="text-gray-600 hover:text-gray-700 text-xs h-8 px-3 sm:h-9 sm:px-4 whitespace-nowrap"
               >
-                <CheckCircle className="h-4 w-4 mr-1" />
-                Mark Closed
+                <CheckCircle className="h-3 w-3 mr-1" />
+                <span className="hidden sm:inline">Mark Closed</span>
+                <span className="sm:hidden">Close</span>
               </Button>
             )}
             {report.status === "Closed" && (
@@ -573,10 +610,11 @@ function ReportCard({
                 variant="outline"
                 size="sm"
                 onClick={() => onStatusChange(report._id, "Verified")}
-                className="text-green-600 hover:text-green-700"
+                className="text-green-600 hover:text-green-700 text-xs h-8 px-3 sm:h-9 sm:px-4 whitespace-nowrap"
               >
-                <Shield className="h-4 w-4 mr-1" />
-                Reopen
+                <Shield className="h-3 w-3 mr-1" />
+                <span className="hidden sm:inline">Reopen</span>
+                <span className="sm:hidden">Open</span>
               </Button>
             )}
           </div>

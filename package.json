@@ -1,5 +1,5 @@
 {
-  "name": "my-v0-project",
+  "name": "cascade-vision",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -55,6 +55,7 @@
     "mongodb": "latest",
     "mongodb-client-encryption": "latest",
     "next": "14.2.16",
+    "next-pwa": "^5.6.0",
     "next-themes": "^0.4.6",
     "react": "^18",
     "react-day-picker": "9.8.0",
@@ -71,6 +72,7 @@
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.9",
+    "workbox-webpack-plugin": "^7.3.0",
     "zod": "3.25.67"
   },
   "devDependencies": {

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { MapPin, Shield, Clock, Calendar, User, Camera, Filter, X, AlertTriangle, Loader2, Eye } from "lucide-react"
+import { MapPin, Shield, Clock, Calendar, User, Camera, Filter, X, AlertTriangle, Loader2, Eye, Menu } from "lucide-react"
 import { type HazardReport, hazardTypes } from "@/lib/models/HazardReport"
 import Navbar from "@/components/Navbar"
 
@@ -31,6 +31,245 @@ export default function MapPage() {
   })
   const [mapInstance, setMapInstance] = useState<any>(null)
   const [mapInitialized, setMapInitialized] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Check if device is mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024)
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Close sidebar when clicking outside on mobile
+  useEffect(() => {
+    if (!isMobile || !sidebarOpen) return
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const sidebar = document.getElementById('mobile-sidebar')
+      const toggleButton = document.getElementById('mobile-sidebar-toggle')
+      
+      if (sidebar && toggleButton && 
+          !sidebar.contains(event.target as Node) && 
+          !toggleButton.contains(event.target as Node)) {
+        setSidebarOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isMobile, sidebarOpen])
+
+  const statusOptions = ["Verified", "Unverified", "Closed"]
+  const severityLevels = ["Low", "Medium", "High", "Critical"]
+
+  const filteredHazards = hazards.filter((hazard) => {
+    if (filters.status.length > 0 && !filters.status.includes(hazard.status)) return false
+    if (filters.severity.length > 0 && !filters.severity.includes(hazard.severity)) return false
+    if (filters.hazardType !== "All types" && hazard.hazardType !== filters.hazardType) return false
+    return true
+  })
+
+  const hazardsWithCoordinates = filteredHazards.filter(
+    (hazard) => hazard.coordinates && hazard.coordinates.lat && hazard.coordinates.lng,
+  )
+
+  const clearFilters = () => {
+    setFilters({
+      status: [],
+      severity: [],
+      hazardType: "All types",
+    })
+  }
+
+  const activeFilterCount = Object.values(filters).filter((value) =>
+    Array.isArray(value) ? value.length > 0 : value !== "All types",
+  ).length
+
+  // Sidebar Content Component
+  const SidebarContent = () => {
+    return (
+      <div className="p-3 h-full overflow-y-auto">
+        {/* Header */}
+        <div className="mb-3">
+          <h1 className="text-base sm:text-lg font-bold text-balance mb-1">Ocean Hazard Map</h1>
+          <p className="text-xs text-muted-foreground text-pretty">
+            Interactive map showing ocean hazards and their current status
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Showing {hazardsWithCoordinates.length} of {filteredHazards.length} hazards with coordinates
+          </p>
+        </div>
+
+        {/* Filters */}
+        <Card className="border-border mb-3">
+          <CardHeader className="px-2 py-0">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Filter className="h-3 w-3 text-primary" />
+                Filters
+              </CardTitle>
+              {activeFilterCount > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="bg-transparent text-xs px-2 py-1 h-6"
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Clear ({activeFilterCount})
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="p-3 pt-0 space-y-3">
+            {/* Status Filter */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium">Status</Label>
+              <div className="space-y-2">
+                {statusOptions.map((status) => (
+                  <div key={status} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`status-${status}`}
+                      checked={filters.status.includes(status)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setFilters((prev) => ({ ...prev, status: [...prev.status, status] }))
+                        } else {
+                          setFilters((prev) => ({ ...prev, status: prev.status.filter((s) => s !== status) }))
+                        }
+                      }}
+                    />
+                    <Label htmlFor={`status-${status}`} className="text-xs">
+                      <Badge className={`text-xs ${getStatusColor(status)}`}>
+                        {status === "Verified" && <Shield className="h-3 w-3 mr-1" />}
+                        {status === "Unverified" && <Clock className="h-3 w-3 mr-1" />}
+                        {status}
+                      </Badge>
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Severity Filter */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium">Severity</Label>
+              <div className="space-y-2">
+                {severityLevels.map((level) => (
+                  <div key={level} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`severity-${level}`}
+                      checked={filters.severity.includes(level)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setFilters((prev) => ({ ...prev, severity: [...prev.severity, level] }))
+                        } else {
+                          setFilters((prev) => ({ ...prev, severity: prev.severity.filter((s) => s !== level) }))
+                        }
+                      }}
+                    />
+                    <Label htmlFor={`severity-${level}`} className="text-xs">
+                      <Badge className={`text-xs ${getSeverityBadge(level)}`}>{level}</Badge>
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Hazard Type Filter */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium">Hazard Type</Label>
+              <Select
+                value={filters.hazardType}
+                onValueChange={(value) => setFilters((prev) => ({ ...prev, hazardType: value }))}
+              >
+                <SelectTrigger className="text-xs h-8">
+                  <SelectValue placeholder="All types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All types" className="text-xs">
+                    All types
+                  </SelectItem>
+                  {hazardTypes.map((type) => (
+                    <SelectItem key={type} value={type} className="text-xs">
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Hazard List */}
+        <Card className="border-border">
+          <CardHeader className="px-3 py-2">
+            <CardTitle className="text-sm">Active Hazards ({filteredHazards.length})</CardTitle>
+            <CardDescription className="text-xs">
+              Click on a hazard to view details and location on map
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-3 pt-0 space-y-1">
+            {filteredHazards.map((hazard) => (
+              <Card
+                key={hazard._id?.toString()}
+                className={`border-muted cursor-pointer transition-all hover:shadow-md ${
+                  selectedHazard?._id?.toString() === hazard._id?.toString() ? "ring-2 ring-primary" : ""
+                }`}
+                onClick={() => setSelectedHazard(hazard)}
+              >
+                <CardContent className="px-3 py-2">
+                  <div className="flex items-start justify-between mb-1">
+                    <h4 className="font-medium text-xs text-foreground line-clamp-2 flex-1 pr-2">{hazard.title}</h4>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <div
+                        className="w-2 h-2 rounded-full border border-white"
+                        style={{ backgroundColor: getSeverityColor(hazard.severity) }}
+                      />
+                      {hazard.status === "Verified" ? (
+                        <Shield className="h-3 w-3 text-green-600" />
+                      ) : hazard.status === "Unverified" ? (
+                        <Clock className="h-3 w-3 text-yellow-600" />
+                      ) : (
+                        <X className="h-3 w-3 text-muted-foreground" />
+                      )}
+                      {!hazard.coordinates && (
+                        <span className="text-xs text-muted-foreground" title="No coordinates available">
+                          📍
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-1 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{hazard.specificLocation || hazard.location}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-3 w-3 shrink-0" />
+                      <span>{new Date(hazard.dateReported).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            {filteredHazards.length === 0 && (
+              <div className="text-center py-4 text-muted-foreground">
+                <MapPin className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                <p className="text-xs">No hazards match current filters</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   useEffect(() => {
     const fetchHazards = async () => {
@@ -197,32 +436,6 @@ export default function MapPage() {
     }
   }
 
-  const statusOptions = ["Verified", "Unverified", "Closed"]
-  const severityLevels = ["Low", "Medium", "High", "Critical"]
-
-  const filteredHazards = hazards.filter((hazard) => {
-    if (filters.status.length > 0 && !filters.status.includes(hazard.status)) return false
-    if (filters.severity.length > 0 && !filters.severity.includes(hazard.severity)) return false
-    if (filters.hazardType !== "All types" && hazard.hazardType !== filters.hazardType) return false
-    return true
-  })
-
-  const hazardsWithCoordinates = filteredHazards.filter(
-    (hazard) => hazard.coordinates && hazard.coordinates.lat && hazard.coordinates.lng,
-  )
-
-  const clearFilters = () => {
-    setFilters({
-      status: [],
-      severity: [],
-      hazardType: "All types",
-    })
-  }
-
-  const activeFilterCount = Object.values(filters).filter((value) =>
-    Array.isArray(value) ? value.length > 0 : value !== "All types",
-  ).length
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -256,295 +469,196 @@ export default function MapPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <div className="flex h-[calc(100vh-73px)]">
-        {/* Sidebar */}
-        <div className="w-80 border-r border-border bg-card/50 overflow-y-auto">
-          <div className="p-4">
-            {/* Header */}
-            <div className="mb-3">
-              <h1 className="text-lg font-bold text-balance mb-1">Ocean Hazard Map</h1>
-              <p className="text-xs text-muted-foreground text-pretty">
-                Interactive map showing ocean hazards and their current status
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Showing {hazardsWithCoordinates.length} of {filteredHazards.length} hazards with coordinates
-              </p>
-            </div>
-
-            {/* Filters */}
-            <Card className="border-border mb-3">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Filter className="h-3 w-3 text-primary" />
-                    Filters
-                  </CardTitle>
-                  {activeFilterCount > 0 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={clearFilters}
-                      className="bg-transparent text-xs px-2 py-1"
-                    >
-                      <X className="h-3 w-3 mr-1" />
-                      Clear ({activeFilterCount})
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {/* Status Filter */}
-                <div className="space-y-1">
-                  <Label className="text-xs font-medium">Status</Label>
-                  <div className="space-y-1">
-                    {statusOptions.map((status) => (
-                      <div key={status} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`status-${status}`}
-                          checked={filters.status.includes(status)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setFilters((prev) => ({ ...prev, status: [...prev.status, status] }))
-                            } else {
-                              setFilters((prev) => ({ ...prev, status: prev.status.filter((s) => s !== status) }))
+      <div className="h-[calc(100vh-73px)] relative">
+        {/* Mobile Layout */}
+        {isMobile ? (
+          <>
+            {/* Mobile Menu Toggle - Fixed position outside containers */}
+            <Button
+              id="mobile-sidebar-toggle"
+              variant="outline"
+              size="sm"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="fixed top-16 right-4 z-[1001] bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm shadow-lg border-border transition-colors duration-300"
+            >
+              {sidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+              <span className="sr-only">Toggle sidebar</span>
+            </Button>
+            
+            {/* Mobile Map Container */}
+            <div className={`absolute inset-0 transition-all duration-300 ${sidebarOpen ? 'translate-x-80' : 'translate-x-0'}`}>
+              <div className="h-full w-full">
+                <div id="map" className="w-full h-full"></div>
+                {mapError && (
+                  <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-background/90 rounded-lg">
+                    <div className="text-center p-4">
+                      <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground mb-2">Map unavailable</p>
+                      <p className="text-sm text-muted-foreground">{mapError}</p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-4 bg-transparent"
+                        onClick={() => {
+                          setMapError(null)
+                          setMapInitialized(false)
+                          const initMapRetry = async () => {
+                            try {
+                              const mapContainer = document.getElementById("map")
+                              if (mapContainer) {
+                                mapContainer.innerHTML = ""
+                              }
+                              setMapInitialized(false)
+                              setTimeout(() => {
+                                window.location.reload()
+                              }, 100)
+                            } catch (err) {
+                              console.error("Retry failed:", err)
                             }
-                          }}
-                        />
-                        <Label htmlFor={`status-${status}`} className="text-xs">
-                          <Badge className={`text-xs ${getStatusColor(status)}`}>
-                            {status === "Verified" && <Shield className="h-3 w-3 mr-1" />}
-                            {status === "Unverified" && <Clock className="h-3 w-3 mr-1" />}
-                            {status}
-                          </Badge>
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Severity Filter */}
-                <div className="space-y-1">
-                  <Label className="text-xs font-medium">Severity</Label>
-                  <div className="space-y-1">
-                    {severityLevels.map((level) => (
-                      <div key={level} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`severity-${level}`}
-                          checked={filters.severity.includes(level)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setFilters((prev) => ({ ...prev, severity: [...prev.severity, level] }))
-                            } else {
-                              setFilters((prev) => ({ ...prev, severity: prev.severity.filter((s) => s !== level) }))
-                            }
-                          }}
-                        />
-                        <Label htmlFor={`severity-${level}`} className="text-xs">
-                          <Badge className={`text-xs ${getSeverityBadge(level)}`}>{level}</Badge>
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Hazard Type Filter */}
-                <div className="space-y-1">
-                  <Label className="text-xs font-medium">Hazard Type</Label>
-                  <Select
-                    value={filters.hazardType}
-                    onValueChange={(value) => setFilters((prev) => ({ ...prev, hazardType: value }))}
-                  >
-                    <SelectTrigger className="text-xs">
-                      <SelectValue placeholder="All types" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="All types" className="text-xs">
-                        All types
-                      </SelectItem>
-                      {hazardTypes.map((type) => (
-                        <SelectItem key={type} value={type} className="text-xs">
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Hazard List */}
-            <Card className="border-border">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Active Hazards ({filteredHazards.length})</CardTitle>
-                <CardDescription className="text-xs">
-                  Click on a hazard to view details and location on map
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {filteredHazards.map((hazard) => (
-                  <Card
-                    key={hazard._id?.toString()}
-                    className={`border-muted cursor-pointer transition-all hover:shadow-md ${
-                      selectedHazard?._id?.toString() === hazard._id?.toString() ? "ring-2 ring-primary" : ""
-                    }`}
-                    onClick={() => setSelectedHazard(hazard)}
-                  >
-                    <CardContent className="px-3">
-                      <div className="flex items-start justify-between mb-1">
-                        <h4 className="font-medium text-xs text-foreground line-clamp-2">{hazard.title}</h4>
-                        <div className="flex items-center gap-1 ml-1">
-                          <div
-                            className="w-2 h-2 rounded-full border border-white"
-                            style={{ backgroundColor: getSeverityColor(hazard.severity) }}
-                          />
-                          {hazard.status === "Verified" ? (
-                            <Shield className="h-3 w-3 text-green-600" />
-                          ) : hazard.status === "Unverified" ? (
-                            <Clock className="h-3 w-3 text-yellow-600" />
-                          ) : (
-                            <X className="h-3 w-3 text-muted-foreground" />
-                          )}
-                          {!hazard.coordinates && (
-                            <span className="text-xs text-muted-foreground" title="No coordinates available">
-                              📍
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="space-y-1 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          <span className="truncate">{hazard.specificLocation || hazard.location}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          <span>{new Date(hazard.dateReported).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-                {filteredHazards.length === 0 && (
-                  <div className="text-center py-4 text-muted-foreground">
-                    <MapPin className="h-6 w-6 mx-auto mb-2 opacity-50" />
-                    <p className="text-xs">No hazards match current filters</p>
+                          }
+                          initMapRetry()
+                        }}
+                      >
+                        Retry Loading Map
+                      </Button>
+                    </div>
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Mobile Sidebar Container */}
+            <div 
+              id="mobile-sidebar"
+              className={`absolute top-0 left-0 h-full w-80 bg-card/95 border-r border-border backdrop-blur-sm transition-all duration-300 z-[999] ${
+                sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+              }`}
+            >
+              <SidebarContent />
+            </div>
+          </>
+        ) : (
+          /* Desktop Layout */
+          <div className="flex h-full">
+            {/* Desktop Sidebar */}
+            <div className="w-80 border-r border-border bg-card/50 overflow-y-auto">
+              <SidebarContent />
+            </div>
+
+            {/* Desktop Map Container */}
+            <div className="flex-1 relative w-full">
+              <div className="h-full w-full">
+                <div id="map" className="w-full h-full"></div>
+                {mapError && (
+                  <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-background/90 rounded-lg">
+                    <div className="text-center p-4">
+                      <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground mb-2">Map unavailable</p>
+                      <p className="text-sm text-muted-foreground">{mapError}</p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-4 bg-transparent"
+                        onClick={() => {
+                          setMapError(null)
+                          setMapInitialized(false)
+                          const initMapRetry = async () => {
+                            try {
+                              const mapContainer = document.getElementById("map")
+                              if (mapContainer) {
+                                mapContainer.innerHTML = ""
+                              }
+                              setMapInitialized(false)
+                              setTimeout(() => {
+                                window.location.reload()
+                              }, 100)
+                            } catch (err) {
+                              console.error("Retry failed:", err)
+                            }
+                          }
+                          initMapRetry()
+                        }}
+                      >
+                        Retry Loading Map
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Selected Hazard Details - Responsive positioning */}
+        {selectedHazard && (
+          <div className={`absolute bottom-4 z-[9999] max-w-[350px] ${
+            isMobile 
+              ? sidebarOpen 
+                ? 'right-2 w-[calc(100vw-21rem-1rem)]' 
+                : 'right-2 w-[calc(100vw-1rem)]'
+              : 'right-8 w-72'
+          }`}>
+            <Card className="border-border bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-lg">
+              <CardHeader className="p-3 pb-2">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-sm text-balance pr-2">{selectedHazard.title}</CardTitle>
+                    <div className="flex items-center gap-1 mt-1 flex-wrap">
+                      <Badge className={`text-xs ${getSeverityBadge(selectedHazard.severity)}`}>
+                        {selectedHazard.severity}
+                      </Badge>
+                      <Badge className={`text-xs ${getStatusColor(selectedHazard.status)}`}>
+                        {selectedHazard.status === "Verified" && <Shield className="h-3 w-3 mr-1" />}
+                        {selectedHazard.status === "Unverified" && <Clock className="h-3 w-3 mr-1" />}
+                        {selectedHazard.status}
+                      </Badge>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedHazard(null)}
+                    className="text-muted-foreground shrink-0 h-8 w-8 p-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-3 pt-0 space-y-2">
+                <p className="text-xs text-muted-foreground text-pretty line-clamp-3">{selectedHazard.description}</p>
+                <div className="space-y-1 text-xs">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <span className="truncate">{selectedHazard.specificLocation || selectedHazard.location}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <span>{new Date(selectedHazard.dateReported).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <User className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <span className="truncate">Reported by {selectedHazard.reportedBy}</span>
+                  </div>
+                  {selectedHazard.mediaFiles && selectedHazard.mediaFiles.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Camera className="h-3 w-3 text-muted-foreground shrink-0" />
+                      <span>
+                        {selectedHazard.mediaFiles.length} media file
+                        {selectedHazard.mediaFiles.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                  )}
+                  {!selectedHazard.coordinates && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <MapPin className="h-3 w-3 shrink-0" />
+                      <span>No coordinates available</span>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
-        </div>
-
-        <div className="flex-1 relative">
-          <div className="h-full">
-            <div id="map" className="w-full h-full"></div>
-            {mapError && (
-              <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-background/90 rounded-lg">
-                <div className="text-center">
-                  <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground mb-2">Map unavailable</p>
-                  <p className="text-sm text-muted-foreground">{mapError}</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-4 bg-transparent"
-                    onClick={() => {
-                      setMapError(null)
-                      setMapInitialized(false)
-                      // Try to reinitialize
-                      const initMap = async () => {
-                        try {
-                          // Clear the map container
-                          const mapContainer = document.getElementById("map")
-                          if (mapContainer) {
-                            mapContainer.innerHTML = ""
-                          }
-                          setMapInitialized(false)
-                          // Wait a bit then reinitialize
-                          setTimeout(() => {
-                            window.location.reload()
-                          }, 100)
-                        } catch (err) {
-                          console.error("Retry failed:", err)
-                        }
-                      }
-                      initMap()
-                    }}
-                  >
-                    Retry Loading Map
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Selected Hazard Details */}
-          {selectedHazard && (
-            <div className="absolute bottom-4 right-8 w-72 z-[9999]" style={{ zIndex: 9999 }}>
-              <Card className="border-border bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-lg">
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-sm text-balance">{selectedHazard.title}</CardTitle>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge className={`text-xs ${getSeverityBadge(selectedHazard.severity)}`}>
-                          {selectedHazard.severity}
-                        </Badge>
-                        <Badge className={`text-xs ${getStatusColor(selectedHazard.status)}`}>
-                          {selectedHazard.status === "Verified" && <Shield className="h-3 w-3 mr-1" />}
-                          {selectedHazard.status === "Unverified" && <Clock className="h-3 w-3 mr-1" />}
-                          {selectedHazard.status}
-                        </Badge>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedHazard(null)}
-                      className="text-muted-foreground"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <p className="text-xs text-muted-foreground text-pretty">{selectedHazard.description}</p>
-                  <div className="space-y-1 text-xs">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-3 w-3 text-muted-foreground" />
-                      <span>{selectedHazard.specificLocation || selectedHazard.location}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-3 w-3 text-muted-foreground" />
-                      <span>{new Date(selectedHazard.dateReported).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <User className="h-3 w-3 text-muted-foreground" />
-                      <span>Reported by {selectedHazard.reportedBy}</span>
-                    </div>
-                    {selectedHazard.mediaFiles && selectedHazard.mediaFiles.length > 0 && (
-                      <div className="flex items-center gap-2">
-                        <Camera className="h-3 w-3 text-muted-foreground" />
-                        <span>
-                          {selectedHazard.mediaFiles.length} media file
-                          {selectedHazard.mediaFiles.length !== 1 ? "s" : ""}
-                        </span>
-                      </div>
-                    )}
-                    {!selectedHazard.coordinates && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <MapPin className="h-3 w-3" />
-                        <span>No coordinates available</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="pt-1">
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </div>
+        )}
       </div>
     </div>
   )

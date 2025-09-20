@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { MapPin, Upload, AlertTriangle, Clock, Camera, User } from "lucide-react"
 import Navbar from "@/components/Navbar"
 import { hazardTypes, locations } from "@/lib/models/HazardReport"
+import { HybridService } from "@/lib/services/hybridService"
 
 export default function ReportPage() {
   const [formData, setFormData] = useState({
@@ -34,6 +35,7 @@ export default function ReportPage() {
   const [locationError, setLocationError] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState("")
+  const [submitSuccess, setSubmitSuccess] = useState("")
 
   const severityLevels = [
     { value: "Low", label: "Low", color: "bg-green-500" },
@@ -41,6 +43,19 @@ export default function ReportPage() {
     { value: "High", label: "High", color: "bg-orange-500" },
     { value: "Critical", label: "Critical", color: "bg-red-500" },
   ]
+
+  // Initialize HybridService and setup online/offline listeners
+  useEffect(() => {
+    const initializeOffline = async () => {
+      try {
+        await HybridService.initialize()
+      } catch (error) {
+        console.warn('Failed to initialize offline storage:', error)
+      }
+    }
+
+    initializeOffline()
+  }, [])
 
   const getCurrentLocation = () => {
     setIsGettingLocation(true)
@@ -117,23 +132,24 @@ export default function ReportPage() {
     e.preventDefault()
     setIsSubmitting(true)
     setSubmitError("")
+    setSubmitSuccess("")
 
     try {
-      // First, create the hazard report
+      // Prepare the hazard report data
       const reportData = {
         title: `${formData.hazardType} - ${formData.location || formData.customLocation}`,
         description: formData.description,
         location: formData.location === "Other" ? formData.customLocation : formData.location,
         hazardType: formData.hazardType,
-        severity: formData.severity,
-        status: "Unverified",
-        dateReported: formData.date,
+        severity: formData.severity as "Low" | "Medium" | "High" | "Critical",
+        status: "Unverified" as const,
+        dateReported: new Date(formData.date),
         reportedBy: formData.contactName || "Anonymous",
         coordinates: {
           lat: Number.parseFloat(formData.coordinates.lat) || 0,
           lng: Number.parseFloat(formData.coordinates.lng) || 0,
         },
-        mediaFiles: [],
+        mediaFiles: [] as string[],
         contactInfo: formData.contactName
           ? {
               name: formData.contactName,
@@ -143,46 +159,34 @@ export default function ReportPage() {
           : undefined,
       }
 
-      const reportResponse = await fetch("/api/hazards", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(reportData),
-      })
+      // Create the hazard report using HybridService (works offline)
+      const newReport = await HybridService.createHazard(reportData)
 
-      if (!reportResponse.ok) {
-        throw new Error("Failed to submit report")
-      }
+      let uploadedFileIds: string[] = []
 
-      const newReport = await reportResponse.json()
-
-      // If there are media files, upload them
+      // If there are media files, upload them using HybridService
       if (formData.media && formData.media.length > 0) {
-        const formDataUpload = new FormData()
-        formData.media.forEach((file) => {
-          formDataUpload.append("files", file)
-        })
-        formDataUpload.append("reportId", newReport._id)
-
-        const uploadResponse = await fetch("/api/upload", {
-          method: "POST",
-          body: formDataUpload,
-        })
-
-        if (!uploadResponse.ok) {
-          console.warn("Failed to upload media files, but report was created")
-          const errorData = await uploadResponse.json()
-          console.error("Upload error:", errorData)
-          alert(`Report submitted successfully, but some media files failed to upload: ${errorData.error || 'Unknown error'}`)
-        } else {
-          const uploadResult = await uploadResponse.json()
-          console.log("Files uploaded successfully:", uploadResult.fileIds)
-          alert("Hazard report and media files submitted successfully! It will be reviewed by our team.")
+        try {
+          const uploadPromises = formData.media.map(file => 
+            HybridService.uploadFile(file, { reportId: newReport._id })
+          )
+          
+          uploadedFileIds = await Promise.all(uploadPromises)
+          
+          // Update the report with file IDs
+          await HybridService.updateHazard(newReport._id!.toString(), {
+            mediaFiles: uploadedFileIds
+          })
+          
+          console.log("Files uploaded successfully:", uploadedFileIds)
+        } catch (uploadError) {
+          console.warn("Failed to upload some media files:", uploadError)
+          // Don't fail the entire submission for file upload errors
         }
-      } else {
-        alert("Hazard report submitted successfully! It will be reviewed by our team.")
       }
+
+      // Show success message
+      setSubmitSuccess("Hazard report submitted successfully! It will be reviewed by our team.")
 
       // Reset form
       setFormData({
@@ -198,8 +202,16 @@ export default function ReportPage() {
         contactPhone: "",
         media: null,
       })
+      
+      // Clear the file input
+      const fileInput = document.getElementById('media') as HTMLInputElement
+      if (fileInput) {
+        fileInput.value = ''
+      }
+      
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "An error occurred")
+      console.error('Error submitting report:', error)
+      setSubmitError(error instanceof Error ? error.message : "An error occurred while submitting the report")
     } finally {
       setIsSubmitting(false)
     }
@@ -220,10 +232,9 @@ export default function ReportPage() {
             </p>
             <Alert className="mt-3 border-warning/20 bg-warning/5">
               <Clock className="h-4 w-4 text-warning" />
-              <AlertDescription className="text-warning-foreground text-xs">
-                <strong>Default Status:</strong> All new reports are marked as{" "}
-                <Badge className="mx-1 bg-warning text-warning-foreground text-xs">Unverified</Badge> until reviewed by
-                professionals.
+              <AlertDescription className="text-warning-foreground text-xs flex items-center gap-2">
+                <strong>Default Status:</strong>
+                <Badge className="bg-warning text-warning-foreground text-xs">Unverified</Badge>
               </AlertDescription>
             </Alert>
           </div>
@@ -374,7 +385,7 @@ export default function ReportPage() {
                         {isGettingLocation ? "Getting Location..." : "Use Current Location"}
                       </Button>
                     </div>
-                    {!navigator.geolocation && (
+                    {typeof window !== 'undefined' && !navigator.geolocation && (
                       <div className="text-xs text-muted-foreground">
                         ⚠️ Geolocation not supported by this browser
                       </div>
@@ -515,7 +526,7 @@ export default function ReportPage() {
                     disabled={isSubmitting}
                     className="flex-1 bg-accent text-accent-foreground btn-colorful"
                   >
-                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    <AlertTriangle className="h-4 w-4 mr-1" />
                     {isSubmitting ? "Submitting..." : "Submit Hazard Report"}
                   </Button>
                 </div>
@@ -524,6 +535,13 @@ export default function ReportPage() {
                   <Alert className="border-destructive/20 bg-destructive/5">
                     <AlertTriangle className="h-4 w-4 text-destructive" />
                     <AlertDescription className="text-destructive text-xs">{submitError}</AlertDescription>
+                  </Alert>
+                )}
+
+                {submitSuccess && (
+                  <Alert className="border-green-500/20 bg-green-500/5">
+                    <AlertTriangle className="h-4 w-4 text-green-600" />
+                    <AlertDescription className="text-green-700 text-xs">{submitSuccess}</AlertDescription>
                   </Alert>
                 )}
 

@@ -262,7 +262,7 @@ export default function HazardDetailModal({ hazardId, isOpen, onClose }: HazardD
 
             {/* All Details in Row Format */}
             <Card className="border-border">
-              <CardHeader>
+              <CardHeader className="border-b border-border">
                 <CardTitle className="flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-primary" />
                   Hazard Details
@@ -521,17 +521,18 @@ export default function HazardDetailModal({ hazardId, isOpen, onClose }: HazardD
                             download
                           >
                             <Download className="h-4 w-4 mr-1" />
-                            Download
+                            <span className="hidden sm:inline">Download</span>
+                            <span className="sm:hidden">Save</span>
                           </a>
                         </Button>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <Camera className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">Media not found</p>
-                    <p className="text-sm text-muted-foreground">No media files attached to this report</p>
+                  <div className="text-center py-6 sm:py-8">
+                    <Camera className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+                    <p className="text-muted-foreground text-xs sm:text-sm">Media not found</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">No media files attached to this report</p>
                   </div>
                 )}
               </CardContent>

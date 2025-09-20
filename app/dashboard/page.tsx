@@ -446,7 +446,7 @@ export default function DashboardPage() {
           {/* Location Cards */}
           <Card className="border-border border-green-200">
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <CardTitle className="flex items-center gap-2 text-base text-green-600">
                     <MapPin className="h-5 w-5 text-green-600" />
@@ -461,7 +461,7 @@ export default function DashboardPage() {
                     <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                     <Input
                       placeholder="Search locations..."
-                      className="pl-7 w-48 text-xs"
+                      className="pl-7 w-full sm:w-48 text-xs"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -470,46 +470,46 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
           <CardContent className="pt-0">
-            <div className="space-y-2">
+            <div className="space-y-3">
               {filteredLocationData.slice(0, 6).map((location) => (
                 <Card key={location.id} className="border-muted transition-shadow">
-                  <CardContent className="p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-sm text-foreground">{location.name}</h3>
-                          <Badge className={`text-xs px-2 py-1 ${getSeverityBadge(location.severity)}`}>
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-sm text-foreground truncate">{location.name}</h3>
+                          <Badge className={`text-xs px-2 py-1 w-fit ${getSeverityBadge(location.severity)}`}>
                             {location.severity}
                           </Badge>
                         </div>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:items-center gap-2 lg:gap-4 text-xs text-muted-foreground mb-3">
                           <div className="flex items-center gap-1">
-                            <div className="w-2 h-2 bg-primary rounded-full" />
-                            <span>{location.activeReports} active reports</span>
+                            <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
+                            <span className="truncate">{location.activeReports} active</span>
                           </div>
                           <div className="flex items-center gap-1">
-                            <div className="w-2 h-2 bg-green-600 rounded-full" />
-                            <span>{location.verifiedReports} verified</span>
+                            <div className="w-2 h-2 bg-green-600 rounded-full flex-shrink-0" />
+                            <span className="truncate">{location.verifiedReports} verified</span>
                           </div>
                           <div className="flex items-center gap-1">
-                            <div className="w-2 h-2 bg-yellow-600 rounded-full" />
-                            <span>{location.unverifiedReports} unverified</span>
+                            <div className="w-2 h-2 bg-yellow-600 rounded-full flex-shrink-0" />
+                            <span className="truncate">{location.unverifiedReports} unverified</span>
                           </div>
-                          <span className="text-xs">Updated {location.lastUpdated}</span>
+                          <span className="text-xs col-span-2 sm:col-span-3 lg:col-span-1">Updated {location.lastUpdated}</span>
                         </div>
                         <div className="mt-2">
                           <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
                             <span>Verification Progress</span>
                             <span>{Math.round((location.verifiedReports / location.activeReports) * 100)}%</span>
                           </div>
-                          <Progress value={(location.verifiedReports / location.activeReports) * 100} className="h-1" />
+                          <Progress value={(location.verifiedReports / location.activeReports) * 100} className="h-1.5" />
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 ml-3">
+                      <div className="flex items-center justify-end lg:justify-center gap-2 lg:ml-3">
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          className="text-xs bg-transparent"
+                          className="text-xs bg-transparent h-8 px-3 sm:h-9 sm:px-4 whitespace-nowrap"
                           onClick={() => {
                             // Show the first hazard from this location
                             const firstHazard = location.hazards[0]
@@ -520,7 +520,8 @@ export default function DashboardPage() {
                           }}
                         >
                           <Eye className="h-3 w-3 mr-1" />
-                          View Details
+                          <span className="hidden sm:inline">View Details</span>
+                          <span className="sm:hidden">View</span>
                         </Button>
                       </div>
                     </div>
